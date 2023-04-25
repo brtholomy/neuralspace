@@ -11,18 +11,6 @@ class NeuronState(IntFlag):
     BUILDING = auto()
     DECAYING = auto()
 
-# FIXME: it seems I could get rid of the DECAY value, and be left with only 3
-# since we decay always
-# class ValidNeuronStates(Flag):
-#     # It just fired:
-#     ACTIVE_DECAY = NeuronState.ACTIVE | NeuronState.DECAYING
-#     # It's below the upper_threshold and still falling:
-#     DECAY = NeuronState.DECAYING
-#     # It fell below the lower_threshold and now accepts input:
-#     BUILDING_DECAY = NeuronState.BUILDING | NeuronState.DECAYING,
-#     # It's above the upper_threshold but hasn't fired:
-#     READY = NeuronState.READY | NeuronState.BUILDING | NeuronState.DECAYING
-
 VALID_NEURON_STATES = [
     # It just fired:
     NeuronState.ACTIVE | NeuronState.DECAYING,
