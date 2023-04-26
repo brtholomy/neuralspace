@@ -103,7 +103,8 @@ class Neuron(object):
         self._voltage = self.VoltageNormalizer(self._voltage - self._decay)
 
         if self._voltage < self._upper_threshold:
-            self._state = self._state ^ NeuronState.ACTIVE
+            # be sure to clear the flag, not just toggle it:
+            self._state = self._state & ~NeuronState.ACTIVE
 
         if self._voltage < self._lower_threshold:
             self._state = self._state | NeuronState.BUILDING
