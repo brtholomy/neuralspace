@@ -67,11 +67,11 @@ class Neuron(object):
         return self._voltage > self._upper_threshold
 
     def CanFire(self):
-        return self.IsReady() and not IsActive() and self.VoltageTrigger()
+        return self.IsReady() and not self.IsActive() and self.VoltageTrigger()
 
     def Fire(self):
-        self._state = self.ACTIVE | self.DECAYING
-        self._voltage = VoltageNormalizer(1)
+        self._state = NeuronState.ACTIVE | NeuronState.DECAYING
+        self._voltage = self.VoltageNormalizer(1)
 
     def FireBuildOrDecay(self):
         """
