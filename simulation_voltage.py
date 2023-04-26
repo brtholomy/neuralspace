@@ -83,20 +83,28 @@ class Worker:
                 activation_score = calculate_neighborhood_activation_score(
                     self.column, cell_info, drid_idx)
 
-                # Check the cell's excitability
+                # building by neighbors
                 if cell.excitability == 1 and cell.activation_state == 0:
                     updated_cell.voltage += activation_score
+
+                # firing
                 if cell.excitability == 1 and cell.activation_state == 0 and cell.voltage > drid.grid.upper_tresh:
                     updated_cell.activation_state = 1
                     updated_cell.voltage = 1
                     updated_cell.excitability = 0
+
+                # decaying
                 if cell.excitability == 1 and cell.activation_state == 0 and cell.voltage < drid.grid.upper_tresh:
                     updated_cell.activation_state = 0
                     updated_cell.voltage -= drid.grid.decay_value
                     updated_cell.excitability = 1
+
+                # decaying ready for BUILDING
                 if cell.excitability == 0 and cell.activation_state == 0 and cell.voltage <= drid.grid.lower_tresh:
                     updated_cell.excitability = 1
                     updated_cell.voltage += activation_score
+
+                # ACTIVE and decaying
                 if cell.excitability == 0 and cell.activation_state == 1 and cell.voltage >= drid.grid.upper_tresh:
                     updated_cell.activation_state = 0
                     updated_cell.voltage -= drid.grid.decay_value

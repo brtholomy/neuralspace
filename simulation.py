@@ -82,23 +82,21 @@ class Worker:
                 updated_cell = Cell(cell.voltage, cell.activation_state,
                                     cell.excitability)
 
-                # Check the cell's excitability
+                # the cell is ready to be fired
                 if cell.excitability == 1:
+                    # fire it in this frame
                     if cell.activation_state == 1:
                         updated_cell.excitability = 0
+                    # propagate effects of firing
                     else:
                         if cell.voltage > drid.grid.upper_tresh:
                             updated_cell.activation_state = 1
                             updated_cell.voltage = 1
                             updated_cell.excitability = 0
                         else:
-                            # Calculate the neighborhood activation score using the new function
-                            activation_score = calculate_neighborhood_activation_score(
+                            # Add the neighborhood activation score to the voltage
+                            updated_cell.voltage += calculate_neighborhood_activation_score(
                                 self.column, cell_info, drid_idx)
-                            activation_score = activation_score
-
-                            # Add the activation score to the voltage
-                            updated_cell.voltage += activation_score
 
                 # If excitability is 0
                 if cell.excitability == 0:

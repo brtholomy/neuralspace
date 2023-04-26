@@ -58,6 +58,7 @@ def establish_connections(column):
             # Find input and output cells
             input_cells = [
                 cell for cell in all_cells
+                # if the ndindex value from the dict is 0,1 or 1,1 ?
                 if cell[2][-1] == (0, 1) or cell[2][-1] == (1, 1)
             ]
             output_cells = [
