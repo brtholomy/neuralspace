@@ -1,32 +1,27 @@
+from dataclasses import dataclass
+from enum import Enum, auto
 import random
-from enum import Flag, IntFlag, IntEnum, auto
 
 import constants as c
 from bias import Bias
 
 
-class NeuronState(IntFlag):
+class NeuronState(Enum):
     ACTIVE = 1
-    READY = auto()
     BUILDING = auto()
-    DECAYING = auto()
+    EXHAUSTED = auto()
 
-VALID_NEURON_STATES = [
-    # It just fired:
-    NeuronState.ACTIVE | NeuronState.DECAYING,
-    # It's below the upper_threshold and still falling:
-    NeuronState.DECAYING,
-    # It fell below the lower_threshold and now accepts input:
-    NeuronState.BUILDING | NeuronState.DECAYING,
-    # It's above the upper_threshold but hasn't fired:
-    NeuronState.READY | NeuronState.BUILDING | NeuronState.DECAYING,
-]
+
+@dataclass
+class Activation:
+    state: NeuronState
+    voltage: float
 
 
 class Neuron(object):
     def __init__(
         self,
-        state: NeuronState = NeuronState.BUILDING | NeuronState.DECAYING,
+        state: NeuronState = NeuronState.BUILDING,
         voltage: float = c.DEFAULT_VOLTAGE,
         decay: float = c.DEFAULT_DECAY,
         lower_threshold: float = c.DEFAULT_LOWER_THRESHOLD,
@@ -46,73 +41,59 @@ class Neuron(object):
             attrs=",".join("{}={!r}".format(k, v) for k, v in self.__dict__.items()),
         )
 
-    def ValidateState(self):
-        if not self._state in VALID_NEURON_STATES:
-            raise ValueError("Neuron is in an unsupported state:", self._state)
+    def _IsActive(self):
+        return self._state is NeuronState.ACTIVE
 
-    def IsActive(self):
-        return NeuronState.ACTIVE in self._state
+    def _IsBuilding(self):
+        return self._state is NeuronState.BUILDING
 
-    def IsReady(self):
-        return NeuronState.READY in self._state
-
-    def IsBuilding(self):
-        return NeuronState.BUILDING in self._state
-
-    def VoltageNormalizer(self, v):
+    def _VoltageNormalizer(self, v):
         # ensure [0,1] condition
         return max(0, min(v, 1))
 
-    def VoltageTrigger(self):
+    def _VoltageTrigger(self):
         return self._voltage > self._upper_threshold
 
-    def CanFire(self):
-        return self.IsReady() and not self.IsActive() and self.VoltageTrigger()
+    def _CanFire(self):
+        return self._IsBuilding() and not self._IsActive() and self._VoltageTrigger()
 
-    def Fire(self):
-        self._state = NeuronState.ACTIVE | NeuronState.DECAYING
-        self._voltage = self.VoltageNormalizer(1)
+    def _Fire(self):
+        self._state = NeuronState.ACTIVE
+        self._voltage = self._VoltageNormalizer(1)
 
-    def FireBuildOrDecay(self):
+    def _Decay(self):
         """
-        Returns an enum indicating which action was taken.
+        Decays voltage by decay rate, and resets state if necessary.
         """
 
-        self.ValidateState()
+        self._voltage = self._VoltageNormalizer(self._voltage - self._decay)
 
-        if self.IsBuilding():
-            if self.CanFire():
-                self.Fire()
-                # should I just return the current _state?
-                return NeuronState.ACTIVE
-
-            # gather afference : do this outside this interface
-            else:
-                # We decay even while building
-                self.Decay()
-                return NeuronState.BUILDING
-
-        # this will catch state == ACTIVE also
-        else:
-            self.Decay()
-            return NeuronState.DECAYING
-
-    def Decay(self):
-        self.ValidateState()
-
-        self._voltage = self.VoltageNormalizer(self._voltage - self._decay)
-
-        if self._voltage < self._upper_threshold:
-            # be sure to clear the flag, not just toggle it:
-            self._state = self._state & ~NeuronState.ACTIVE
+        if self._IsActive() and self._voltage < self._upper_threshold:
+            self._state = NeuronState.EXHAUSTED
 
         if self._voltage < self._lower_threshold:
-            self._state = self._state | NeuronState.BUILDING
+            self._state = NeuronState.BUILDING
 
-    def IncrementVoltage(self, incoming):
-        self.ValidateState()
+    def _FireOrDecay(self):
+        """
+        Returns an Activation indicating which action was taken.
+        """
+        if self._CanFire():
+            self._Fire()
+        else:
+            self._Decay()
+        return Activation(self._state, self._voltage)
 
-        self._voltage = self.VoltageNormalizer(self._voltage + incoming)
+    def AcceptVoltage(self, incoming: float):
+        """
+        Accepts incoming voltage, potentially changes state, and runs _FireOrDecay.
+
+        Returns an Activation indicating which action was taken.
+        """
+
+        self._voltage = self._VoltageNormalizer(self._voltage + incoming)
 
         if self._voltage > self._upper_threshold:
-            self._state = self._state | NeuronState.READY
+            self._state = NeuronState.READY
+
+        return self._FireOrDecay()
