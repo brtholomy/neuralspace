@@ -128,8 +128,11 @@ class Neuron:
     def _ChooseGrowthAction(self):
         return random.choice([*GrowthAction])
 
+    def _CompareValueGenerator(self):
+        return random.random()
+
     def _Maybe(self, gf):
-        return gf.p > random.random()
+        return gf.p > self._CompareValueGenerator()
 
     def _DecayGrowthFactor(self, gf: GrowthFactor):
         # FIXME: use proper ln() distribution
