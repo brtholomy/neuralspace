@@ -1,11 +1,12 @@
 import unittest
+from unittest.mock import MagicMock
 
 import constants
 import neuron
-from neuron import NeuronState, Activation
+from neuron import NeuronState, Activation, GrowthAction, GrowthFactor
 
 
-class TestNeuron(unittest.TestCase):
+class TestNeuronCore(unittest.TestCase):
     def testEmpty(self):
         n = neuron.Neuron()
         self.assertTrue(n._IsBuilding())
@@ -69,6 +70,15 @@ class TestNeuron(unittest.TestCase):
 
         # adds BUILDING state:
         self.assertEqual(n._FireOrDecay(), Activation(NeuronState.BUILDING, ending_voltage))
+
+class TestNeuronGrow(unittest.TestCase):
+    def testSingle(self):
+        n = neuron.Neuron()
+        n._Maybe = MagicMock(return_value=True)
+
+        gf = GrowthFactor(GrowthAction.SPAWN, 1)
+        n.Grow(set(), gf)
+        self.assertTrue(len(n._connections) > 0)
 
 
 if __name__ == "__main__":

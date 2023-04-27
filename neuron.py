@@ -18,7 +18,19 @@ class Activation:
     voltage: float
 
 
-class Neuron(object):
+class GrowthAction(Enum):
+    SPAWN = auto()
+    CLUSTER = auto()
+    BRANCH = auto()
+
+
+@dataclass
+class GrowthFactor:
+    action: GrowthAction
+    p: float
+
+
+class Neuron:
     def __init__(
         self,
         state: NeuronState = NeuronState.BUILDING,
@@ -27,6 +39,7 @@ class Neuron(object):
         lower_threshold: float = c.DEFAULT_LOWER_THRESHOLD,
         upper_threshold: float = c.DEFAULT_UPPER_THRESHOLD,
         bias: Bias = Bias(),
+        connections=set(),
     ):
         self._state = state
         self._voltage = voltage
@@ -34,6 +47,7 @@ class Neuron(object):
         self._lower_threshold = lower_threshold
         self._upper_threshold = upper_threshold
         self._bias = bias
+        self._connections = connections
 
     def __repr__(self):
         return "<{name} {attrs}>".format(
@@ -84,7 +98,7 @@ class Neuron(object):
             self._Decay()
         return Activation(self._state, self._voltage)
 
-    def AcceptVoltage(self, incoming: float):
+    def _AcceptVoltage(self, incoming: float):
         """
         Accepts incoming voltage, potentially changes state, and runs _FireOrDecay.
 
@@ -97,3 +111,58 @@ class Neuron(object):
             self._state = NeuronState.READY
 
         return self._FireOrDecay()
+
+    def Propagate(self, incoming: float):
+        """
+        Accepts incoming voltage, potentially changes state, and recurses among its connections.
+        """
+        activation = self._AcceptVoltage(incoming)
+        if activation.state is NeuronState.ACTIVE:
+            for con in self._connections:
+                yield con.Propagate(activation.voltage)
+
+    def _GrowthDecayGenerator(self):
+        # FIXME: use proper ln() distribution
+        return random.random()
+
+    def _ChooseGrowthAction(self):
+        return random.choice([*GrowthAction])
+
+    def _Maybe(self, gf):
+        return gf.p > random.random()
+
+    def _DecayGrowthFactor(self, gf: GrowthFactor):
+        # FIXME: use proper ln() distribution
+        gf.action = self._ChooseGrowthAction()
+        gf.p = max(gf.p - self._GrowthDecayGenerator(), 0)
+        return gf
+
+    def _AddConnection(self, other):
+        self._connections.add(other)
+
+    def _NeuronGenerator(self):
+        return Neuron()
+
+    def Grow(self, others: set, gf: GrowthFactor):
+        others.add(self)
+        gf = self._DecayGrowthFactor(gf)
+
+        if gf.action is GrowthAction.SPAWN:
+            if self._Maybe(gf):
+                new = self._NeuronGenerator()
+                self._AddConnection(new)
+                new.Grow(others, gf)
+
+        elif gf.action is GrowthAction.CLUSTER:
+            others_static = others.copy()
+            for o in others_static:
+                if o is not self and self._Maybe(gf):
+                    self._AddConnection(o)
+                    o.Grow(others, gf)
+
+        elif gf.action is GrowthAction.BRANCH:
+            if self._Maybe(gf):
+                new = self._NeuronGenerator()
+                self._AddConnection(new)
+                others = set([self])
+                new.Grow(others, gf)
