@@ -6,6 +6,8 @@ from math import floor
 import numpy as np
 import matplotlib.pyplot as plt
 
+import constants as c
+
 
 @dataclass
 class Inertia:
@@ -31,7 +33,7 @@ class Particle:
     position: Position
 
 
-DEGREES_TO_COORD = {
+DEGREES_TO_OFFSET = {
     0: (1, 0),
     45: (1, 1),
     90: (0, 1),
@@ -42,20 +44,29 @@ DEGREES_TO_COORD = {
     315: (1, -1),
 }
 
+class Field:
+    """Represented as a dictionary keyed by tuple to resistance value."""
+
+    def __init__(self, size, init):
+        self._grid = {coord: init for coord in it.product(range(size), range(size))}
+
+    def GetResistanceAt(self, pos):
+        return self._grid[pos]
+
 
 def DivideDirection(intertia):
     """Divides a continuous degree value among 8 possible coordinate offsets."""
 
-    lower_deg = floor(intertia.direction / 45) * 45
-    upper_deg = lower_deg + 45
+    lower_deg = floor(intertia.direction / c.FOURTYFIVE) * c.FOURTYFIVE
+    upper_deg = lower_deg + c.FOURTYFIVE
 
-    rem = intertia.direction % 45
-    factor = rem / 45
+    rem = intertia.direction % c.FOURTYFIVE
+    factor = rem / c.FOURTYFIVE
 
-    upper_ratio = factor
     lower_ratio = 1 - factor
+    upper_ratio = factor
 
-    return (upper_deg, upper_ratio), (lower_deg, lower_ratio)
+    return (lower_deg, lower_ratio), (upper_deg, upper_ratio)
 
 
 def GetOffsetPosition(pos, offset):
@@ -80,43 +91,35 @@ def GetNewPosition(field, particle):
 
     """
 
-    (a_deg, a_ratio), (b_deg, b_ratio) = DivideDirection(particle.inertia)
-    a_offset = DEGREES_TO_COORD[a_deg]
-    b_offset = DEGREES_TO_COORD[b_deg]
-    a_pos = GetOffsetPosition(particle.position, a_offset)
-    b_pos = GetOffsetPosition(particle.position, b_offset)
+    (l_deg, l_ratio), (u_deg, u_ratio) = DivideDirection(particle.inertia)
+    l_pos = GetOffsetPosition(particle.position, DEGREES_TO_OFFSET[l_deg])
+    u_pos = GetOffsetPosition(particle.position, DEGREES_TO_OFFSET[u_deg])
 
-    a_res = field.GetResistanceAt(a_pos)
-    b_res = field.GetResistanceAt(b_pos)
-    a_res_r = a_res - (a_res * a_ratio)
-    b_res_r = b_res - (b_res * b_ratio)
+    l_res = field.GetResistanceAt(l_pos)
+    u_res = field.GetResistanceAt(u_pos)
+    # we diminish the resistance by its ratio of the diagonal through the two
+    # points.
+    l_res_r = l_res - (l_res * l_ratio)
+    u_res_r = u_res - (u_res * u_ratio)
 
-    return a_pos if a_res_r < b_res_r else b_pos
+    # swerving away from the point of resistance
+    if l_res_r < u_res_r:
+        new_pos = l_pos
+        deg_Δ = l_res_r * c.FOURTYFIVE
+    else:
+        new_pos = u_pos
+        deg_Δ = u_res_r * c.FOURTYFIVE * -1
 
-
-class Field:
-    """Represented as a dictionary keyed by tuple to resistance value."""
-
-    def __init__(self, size, init):
-        self._grid = {coord: init for coord in it.product(range(size), range(size))}
-
-    def GetResistanceAt(self, pos):
-        return self._grid[pos]
+    return new_pos, deg_Δ
 
 
+def GetNewInertia(p, deg_Δ):
+    p.inertia.direction += deg_Δ
+    # TODO: calculate a new scalar value as well.
+    return p.inertia
 
-if __name__ == "__main__":
-    f = Field(10, 0.1)
-    i = Inertia(2, 90)
-    p = Particle(i, (5, 5))
 
-    p.position = GetNewPosition(f, p)
-    print(f'{p.position = }')
-    p.position = GetNewPosition(f, p)
-    print(f'{p.position = }')
-    p.position = GetNewPosition(f, p)
-    print(f'{p.position = }')
-
-    p.inertia.direction = 180
-    p.position = GetNewPosition(f, p)
-    print(f'{p.position = }')
+def UpdateParticle(f, p):
+    p.position, deg_Δ = GetNewPosition(f, p)
+    p.inertia = GetNewInertia(p, deg_Δ)
+    return p
