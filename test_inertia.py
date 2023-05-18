@@ -1,8 +1,8 @@
 import unittest
 from inertia import *
 
-class TestPosition(unittest.TestCase):
 
+class TestPosition(unittest.TestCase):
     def testStraight(self):
         f = Field(10, 0.1)
         i = Inertia(1, 90)
@@ -14,7 +14,6 @@ class TestPosition(unittest.TestCase):
         self.assertEqual(p.position, (1, 3))
         p = UpdateParticle(f, p)
         self.assertEqual(p.position, (1, 4))
-
 
     def testDiagonal(self):
         f = Field(10, 0.1)
@@ -42,7 +41,6 @@ class TestPosition(unittest.TestCase):
         # eventually the diagonal shows:
         self.assertEqual(p.position, (3, 1))
 
-
     def testSteepAngle(self):
         f = Field(10, 0.1)
         angle = 70
@@ -58,5 +56,5 @@ class TestPosition(unittest.TestCase):
         self.assertEqual(p.position, (1, 3))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

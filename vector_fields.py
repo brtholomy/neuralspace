@@ -75,7 +75,7 @@ def Slope(point, vertex):
 
 
 def Radians(point, vertex):
-    return math.atan2(Slope(point, vertex))
+    return math.atan2(*Slope(point, vertex))
 
 
 def NearestVertex(point, vertices):
@@ -115,7 +115,7 @@ def PlotField(field):
 
 
 if __name__ == "__main__":
-    size = 10
+    size = 100
     Z_FIELDS = 2
 
     # vertices = CircleVertices((0, 0), 0.5)
