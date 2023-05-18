@@ -97,6 +97,8 @@ def ImpressField(field, vertices, strength):
         field[i] = (
             point,
             (
+                # adjusting the distance by a strength factor, not simply
+                # resetting it:
                 mean(((strength * nearest["distance"]), distance)),
                 (strength * nearest["radians"]) - radians,
             ),
