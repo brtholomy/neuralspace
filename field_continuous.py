@@ -28,23 +28,36 @@ class Particle:
 
 
 class Field:
-    def __init__(self, decay_rate, ge):
-        self.decay_rate = decay_rate
+    def __init__(self, ge, dist_func=None):
         self.ge = ge
+        self.dist_func = self.Sigmoid if not dist_func else dist_func
 
-    def DistanceMetric(self, p1, p2):
+    def Sigmoid(self, x):
+        # A sigmoid curve displaced down and normalized to (0,1)
+        return ((1 / (1 + math.exp(-x))) - 0.5) * 2
+
+    def CosHyperbola(self, x):
+        # The cosh hyperbola is gentler than x^2 or e^x
+        return math.cosh(x) - 1
+
+    def EulerHyperbola(self, x):
+        # The most dramatic curve:
+        return math.exp(x) - 1
+
+    def _DistanceMetric(self, p1, p2):
         return abs(math.dist(p1, p2))
 
-    def Distance(self, p):
+    def _AbsDistance(self, p):
         # draws a line from GeometryEntity center to the given point, and asks
         # for the intersections (the line is infinitely long, so it will
-        # intersect twice if it's not an exact tangent).
+        # intersect twice for any ellipse if it's not an exact tangent).
         intersections = self.ge.intersection(sp.Line(self.ge.center, p))
+        # find the intersection with the minimum distance.
         # note the use of .evalf() to convert the sympy rationals to float:
-        return min(self.DistanceMetric(i.evalf(), p) for i in intersections)
+        return min(self._DistanceMetric(i.evalf(), p) for i in intersections)
 
     def ResistanceAt(self, point):
-        return self.Distance(point) - self.decay_rate
+        return self.dist_func(self._AbsDistance(point))
 
 
 def GetJumpPositions(p: Particle, f: Field):
@@ -73,7 +86,7 @@ def Jump(p: Particle, f: Field):
     # one another, along a normed number line:
     resistance_adj = p.inertia.magnitude - nearest["resistance"]
     print(f'{nearest["resistance"] = }')
-    print(f'{resistance_adj = }')
+    print(f"{resistance_adj = }")
     weights = (1, resistance_adj)
     newp.inertia.radians = fmean((p.inertia.radians, nearest["radians"]), weights)
     return newp
@@ -84,7 +97,7 @@ if __name__ == "__main__":
     vradius = 2
     hradius = 2
     ge = sp.Ellipse(c, hradius, vradius)
-    f = Field(0.1, ge)
+    f = Field(ge)
 
     m = Inertia(1, math.pi / 2)
     jspec = JumpSpec(1, math.pi / 8, 3)
@@ -93,5 +106,5 @@ if __name__ == "__main__":
 
     print(f"{p = }")
     for _ in range(10):
-        print(f"{p.position.evalf() = }")
         p = Jump(p, f)
+    print(f"{p.position.evalf() = }")
