@@ -9,6 +9,7 @@ import sympy as sp
 from field_continuous import Field
 from vector_fields import PlotShow
 
+
 @dataclass
 class Inertia:
     magnitude: float
@@ -60,8 +61,10 @@ def Jump(p: Particle, f: Field):
     # adjust the inertial radians using the resistance at jump point:
     # TODO: resistance and inertia.magnitude should relate more strictly with
     # one another, along a normed number line:
-    weights = (1, 1+least["resistance"])
-    newp.inertia.radians = UpdateRadians(fmean((p.inertia.radians, least["radians"]), weights))
+    weights = (1, 1 + least["resistance"])
+    newp.inertia.radians = UpdateRadians(
+        fmean((p.inertia.radians, least["radians"]), weights)
+    )
     return newp
 
 
@@ -72,6 +75,25 @@ def PlotPositions(positions):
 
     plt.scatter(X, Y, c=I)
     plt.colorbar(label="number of jumps")
+    plt.axis("equal")
+    PlotShow()
+
+
+def PlotField(f: Field, xymax: tuple, granularity: int):
+    xmax, ymax = xymax
+    coords = []
+    for x in np.linspace(-xmax, xmax, granularity):
+        for y in np.linspace(-ymax, ymax, granularity):
+            res = f.ResistanceAt((x, y))
+            coords.append((x, y, res))
+    coords = np.array(coords)
+
+    X = coords[:, [0]]
+    Y = coords[:, [1]]
+    Z = coords[:, [2]]
+
+    plt.scatter(X, Y, c=Z)
+    plt.colorbar(label="firing path resistance")
     plt.axis("equal")
     PlotShow()
 
@@ -92,9 +114,10 @@ if __name__ == "__main__":
     positions = []
     for i in range(jumps):
         p = Jump(p, f)
-        # print(f"{p.inertia.radians = }")
-        # print(f"{p.position.evalf() = }")
         positions.append(tuple(p.position.evalf()))
 
     positions = np.array(positions)
     PlotPositions(positions)
+
+    # this is expensive:
+    PlotField(f, (5, 5), 50)
