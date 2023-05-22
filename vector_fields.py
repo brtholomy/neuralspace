@@ -8,18 +8,6 @@ import matplotlib.patches as patches
 from scipy.interpolate import NearestNDInterpolator
 
 
-def PlotShow(plot=None):
-    # special magic for avoiding a blocking call
-    if plot:
-        plt.show(plot, block=False)
-    else:
-        plt.show(block=False)
-    # Pause to allow the input call to run:
-    plt.pause(0.001)
-    input("hit [enter] to end.")
-    plt.close("all")
-
-
 def GetVertices(polygon):
     return polygon.get_path().vertices
 
@@ -65,7 +53,7 @@ def NN():
     plt.legend()
     plt.colorbar()
     plt.axis("equal")
-    PlotShow()
+    viz.PlotShow()
 
 
 def Slope(point, vertex):
@@ -113,7 +101,7 @@ def PlotField(field):
     plt.scatter(X, Y, c=distances)
     plt.colorbar(label="firing path resistance")
     plt.axis("equal")
-    PlotShow()
+    viz.PlotShow()
 
 
 if __name__ == "__main__":

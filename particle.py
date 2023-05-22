@@ -5,10 +5,10 @@ from statistics import fmean
 import matplotlib.pyplot as plt
 import numpy as np
 import sympy as sp
+from tqdm import tqdm
 
 from field_continuous import Field
-from vector_fields import PlotShow
-
+import visualization as viz
 
 @dataclass
 class Inertia:
@@ -45,8 +45,7 @@ def LeastResistantJump(p: Particle, f: Field):
         # evaluate=False
         offset = sp.Point(
             # get the offset coord by multiplying the radius * unit circle value:
-            [p.jspec.radius * i for i in (math.cos(radians),
-                                          math.sin(radians))]
+            [p.jspec.radius * i for i in (math.cos(radians), math.sin(radians))]
         )
         # sp.Point allows this convenient expression:
         pos = p.position + offset
@@ -77,36 +76,6 @@ def Jump(p: Particle, f: Field):
     return newp
 
 
-def PlotPositions(positions):
-    X = positions[:, [0]]
-    Y = positions[:, [1]]
-    I = range(len(positions))
-
-    plt.scatter(X, Y, c=I)
-    plt.colorbar(label="number of jumps")
-    plt.axis("equal")
-    PlotShow()
-
-
-def PlotField(f: Field, xymax: tuple, granularity: int):
-    xmax, ymax = xymax
-    coords = []
-    for x in np.linspace(-xmax, xmax, granularity):
-        for y in np.linspace(-ymax, ymax, granularity):
-            res = f.ResistanceAt((x, y))
-            coords.append((x, y, res))
-    coords = np.array(coords)
-
-    X = coords[:, [0]]
-    Y = coords[:, [1]]
-    Z = coords[:, [2]]
-
-    plt.scatter(X, Y, c=Z)
-    plt.colorbar(label="firing path resistance")
-    plt.axis("equal")
-    PlotShow()
-
-
 if __name__ == "__main__":
     center = sp.Point(0, 0)
     vradius = 2
@@ -121,19 +90,21 @@ if __name__ == "__main__":
     f = Field(firing)
     f.AddShape(resting, f.EulerHyperbola)
 
-    m = Inertia(1, math.pi / 2)
-    jspec = JumpSpec(0.25, math.pi / 4, 5)
+    m = Inertia(magnitude=1, radians=math.pi / 2)
+    jspec = JumpSpec(radius=0.25, arc=math.pi / 4, granularity=5)
     initial = sp.Point(4, 0)
     p = Particle(m, jspec, initial)
 
     jumps = 100
     positions = []
-    for i in range(jumps):
+    for i in tqdm(range(jumps)):
         p = Jump(p, f)
-        positions.append(tuple(p.position.evalf()))
+        positions.append(tuple(p.position.evalf()) + (p.inertia.radians,))
 
-    positions = np.array(positions)
-    PlotPositions(positions)
+    # Prefer to append to a vanilla list and cast, because numpy arrays do much
+    # better with a single invocation:
+    positions = np.asarray(positions, dtype=np.float64)
 
-    # this is expensive:
-    # PlotField(f, (5, 5), 100)
+    # viz.PlotPositions(positions)
+    # viz.PlotField(f, (5, 5), 100)
+    viz.Record(positions, frames_per_sec=10)
